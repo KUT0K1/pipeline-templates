@@ -76,16 +76,38 @@ jobs:
           WORLD_BEHAVIOR="world_behavior_packs.json"
           echo "WORLD_BEHAVIOR=$WORLD_BEHAVIOR" >> $GITHUB_ENV
 
-      - name: unknown
+      - name: Ensure manifest.json exists
         if: steps.changelog.outputs.skipped != 'true'
         run: |
-          # If the manifest.json file does not already exist: Create a folder and copy the template into it.
+          # If the manifest.json file does not already exist: Create it with a default structure.
           if [ ! -f "$MANIFEST" ]; then
             mkdir -p "$FOLDER"
-            cp "minecraft/manifest.template.json" "$MANIFEST"
-            echo "Created manifest from template: $MANIFEST"
+            cat > "$MANIFEST" <<'EOF'
+            {
+              "format_version": 2,
+              "header": {
+                "name": "",
+                "description": "",
+                "uuid": "",
+                "version": [0,0,1],
+                "min_engine_version": [1,20,0]
+              },
+              "modules": [
+                {
+                  "type": "data",
+                  "uuid": "",
+                  "version": [0,0,1]
+                }
+              ],
+              "metadata": { "authors": [] }
+            }
+            EOF
+            echo "Created default manifest.json at $MANIFEST"
           fi
 
+      - name: Ensure world_behavior_packs.json exists
+        if: steps.changelog.outputs.skipped != 'true'
+        run: |
           # If the world_behavior_packs.json file does not already exist: Create it with a default structure.
           if [ ! -f "$WORLD_BEHAVIOR" ]; then
             echo '[{ "pack_id": "", "version": [] }]' > "$WORLD_BEHAVIOR"
