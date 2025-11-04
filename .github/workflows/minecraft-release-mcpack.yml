@@ -59,26 +59,20 @@ jobs:
           # If the manifest.json file does not already exist: Create it with a default structure.
           if [ ! -f "$MANIFEST" ]; then
             mkdir -p "$FOLDER"
-            cat > "$MANIFEST" <<'EOF'
-            {
-              "format_version": 2,
-              "header": {
-                "name": "",
-                "description": "",
-                "uuid": "",
-                "version": [0,0,1],
-                "min_engine_version": [1,20,0]
+            jq -n '{
+              format_version: 2,
+              header: {
+                name: "",
+                description: "",
+                uuid: "",
+                version: [0,0,1],
+                min_engine_version: [1,20,0]
               },
-              "modules": [
-                {
-                  "type": "data",
-                  "uuid": "",
-                  "version": [0,0,1]
-                }
+              modules: [
+                { type: "data", uuid: "", version: [0,0,1] }
               ],
-              "metadata": { "authors": [] }
-            }
-            EOF
+              metadata: { authors: [] }
+            }' > "$MANIFEST"
             echo "Created default manifest.json at $MANIFEST"
           fi
 
@@ -86,7 +80,7 @@ jobs:
         run: |
           # If the world_behavior_packs.json file does not already exist: Create it with a default structure.
           if [ ! -f "$WORLD_BEHAVIOR" ]; then
-            echo '[{ "pack_id": "", "version": [] }]' > "$WORLD_BEHAVIOR"
+            jq -n '[{ pack_id: "", version: [] }]' > "$WORLD_BEHAVIOR"
             echo "Created default world_behavior_packs.json: $WORLD_BEHAVIOR"
           fi
 
