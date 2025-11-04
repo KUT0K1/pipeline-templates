@@ -38,26 +38,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate changelog and version
-        id: changelog
-        uses: TriPSs/conventional-changelog-action@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          output-file: "CHANGELOG.md"
-          release-count: ${{ inputs.changelog_release_count }}
-          skip-commit: true
-          skip-tag: true
-
-      - name: Debug changelog outputs
-        run: |
-          echo "VERSION=${{ steps.changelog.outputs.version }}" >> $GITHUB_ENV
-          echo "Version: $VERSION"
-          echo "TAG=${{ steps.changelog.outputs.tag }}" >> $GITHUB_ENV
-          echo "Tag: $TAG"
-          echo "Skipped: ${{ steps.changelog.outputs.skipped }}"
-
       - name: Determine folder and file paths
-        if: steps.changelog.outputs.skipped != 'true'
         run: |
           # If inputs.folder is empty, derive from project_name; spaces -> underscores, preserve case sensitivity
           FOLDER="${{ inputs.folder }}"
@@ -74,7 +55,6 @@ jobs:
           echo "WORLD_BEHAVIOR=$WORLD_BEHAVIOR" >> $GITHUB_ENV
 
       - name: Ensure manifest.json exists
-        if: steps.changelog.outputs.skipped != 'true'
         run: |
           # If the manifest.json file does not already exist: Create it with a default structure.
           if [ ! -f "$MANIFEST" ]; then
@@ -103,13 +83,30 @@ jobs:
           fi
 
       - name: Ensure world_behavior_packs.json exists
-        if: steps.changelog.outputs.skipped != 'true'
         run: |
           # If the world_behavior_packs.json file does not already exist: Create it with a default structure.
           if [ ! -f "$WORLD_BEHAVIOR" ]; then
             echo '[{ "pack_id": "", "version": [] }]' > "$WORLD_BEHAVIOR"
             echo "Created default world_behavior_packs.json: $WORLD_BEHAVIOR"
           fi
+
+      - name: Generate changelog and version
+        id: changelog
+        uses: TriPSs/conventional-changelog-action@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          output-file: "CHANGELOG.md"
+          release-count: ${{ inputs.changelog_release_count }}
+          skip-commit: true
+          skip-tag: true
+
+      - name: Debug changelog outputs
+        run: |
+          echo "VERSION=${{ steps.changelog.outputs.version }}" >> $GITHUB_ENV
+          echo "Version: $VERSION"
+          echo "TAG=${{ steps.changelog.outputs.tag }}" >> $GITHUB_ENV
+          echo "Tag: $TAG"
+          echo "Skipped: ${{ steps.changelog.outputs.skipped }}"
 
       - name: Update manifest.json and world_behavior_packs.json
         if: steps.changelog.outputs.skipped != 'true'
