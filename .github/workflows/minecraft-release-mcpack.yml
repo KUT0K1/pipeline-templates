@@ -25,9 +25,6 @@ on:
         type: number
         default: 1
 
-permissions:
-  contents: write
-
 jobs:
   create_release:
     runs-on: ubuntu-latest
@@ -93,7 +90,6 @@ jobs:
           release-count: ${{ inputs.changelog_release_count }}
           skip-commit: true
           skip-tag: true
-          types: "*"
 
       - name: Debug changelog outputs
         run: |
