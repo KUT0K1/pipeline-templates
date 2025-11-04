@@ -192,4 +192,6 @@ jobs:
           tag_name: ${{ env.TAG }}
           name: "${{ inputs.project_name }} ${{ env.TAG }}"
           body_path: CHANGELOG.md
-          files: "${{ steps.create_archive.outputs.archive }}"
+          files: |
+            ${{ steps.create_archive.outputs.archive }},
+            $WORLD_BEHAVIOR
