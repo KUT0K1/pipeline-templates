@@ -180,7 +180,7 @@ jobs:
         id: create_archive
         run: |
           ARCHIVE="$(echo "$FOLDER" | tr '[:upper:]' '[:lower:]')_${VERSION}.mcpack"
-          zip -r "$ARCHIVE" "$FOLDER"
+          zip -r "$ARCHIVE" "$FOLDER"/*
           echo "archive=$ARCHIVE" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
