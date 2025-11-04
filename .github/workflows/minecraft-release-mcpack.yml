@@ -71,6 +71,7 @@ jobs:
               metadata: { authors: [] }
             }' > "$MANIFEST"
             echo "Created default manifest.json at $MANIFEST"
+            echo "CREATED_MANIFEST=true" >> $GITHUB_ENV
           fi
 
       - name: Ensure world_behavior_packs.json exists
@@ -79,7 +80,18 @@ jobs:
           if [ ! -f "$WORLD_BEHAVIOR" ]; then
             jq -n '[{ pack_id: "", version: [] }]' > "$WORLD_BEHAVIOR"
             echo "Created default world_behavior_packs.json: $WORLD_BEHAVIOR"
+            echo "CREATED_WORLD_BEHAVIOR=true" >> $GITHUB_ENV
           fi
+
+      - name: Commit basic structure if created
+        if: env.CREATED_MANIFEST == 'true' || env.CREATED_WORLD_BEHAVIOR == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add .
+          git commit -m "feat: basic structure added" || echo "No changes to commit"
+          git push origin "HEAD:${{ github.ref_name }}"
 
       - name: Generate changelog and version
         id: changelog
@@ -145,6 +157,18 @@ jobs:
           echo "Updated $WORLD_BEHAVIOR:"
           cat "$WORLD_BEHAVIOR"
 
+      - name: Commit updates, create tag and release
+        if: steps.changelog.outputs.skipped != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add .
+          git commit -m "chore: bump pack versions to $VERSION" || echo "No changes to commit"
+          git tag "$TAG"
+
+          git push --atomic origin "HEAD:${{ github.ref_name }}" "$TAG"
+
       - name: Create .mcpack archive
         if: steps.changelog.outputs.skipped != 'true'
         id: create_archive
@@ -152,20 +176,6 @@ jobs:
           ARCHIVE="$(echo "$FOLDER" | tr '[:upper:]' '[:lower:]')_${VERSION}.mcpack"
           zip -r "$ARCHIVE" "$FOLDER"
           echo "archive=$ARCHIVE" >> $GITHUB_OUTPUT
-
-      - name: Commit updates, create tag and release
-        if: steps.changelog.outputs.skipped != 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add "$MANIFEST"
-          git add "$WORLD_BEHAVIOR"
-
-          git commit -m "chore: bump pack versions to $VERSION" || echo "No changes to commit"
-          git tag "$TAG"
-
-          git push --atomic origin "HEAD:${{ github.ref_name }}" "$TAG"
 
       - name: Create GitHub Release
         if: steps.changelog.outputs.skipped != 'true'
