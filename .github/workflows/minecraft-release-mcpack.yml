@@ -93,6 +93,7 @@ jobs:
           release-count: ${{ inputs.changelog_release_count }}
           skip-commit: true
           skip-tag: true
+          types: "*"
 
       - name: Debug changelog outputs
         run: |
