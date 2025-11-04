@@ -1,0 +1,24 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "",
+    "description": "",
+    "uuid": "",
+    "version": [],
+    "min_engine_version": [
+      1,
+      20,
+      0
+    ]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "",
+      "version": []
+    }
+  ],
+  "metadata": {
+    "authors": []
+  }
+}
