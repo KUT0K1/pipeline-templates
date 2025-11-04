@@ -9,7 +9,7 @@ on:
         type: string
       folder:
         description: "Folder"
-        required: true
+        required: false
         type: string
       header_uuid:
         description: "Header UUID (header.uuid)"
