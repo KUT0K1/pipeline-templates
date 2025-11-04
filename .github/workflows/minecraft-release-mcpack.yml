@@ -1,4 +1,4 @@
-name: MCPACK Release Template
+name: Minecraft Release MCPACK Template
 
 on:
   workflow_call:
