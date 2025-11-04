@@ -24,6 +24,12 @@ on:
         required: false
         type: number
         default: 1
+    secrets:
+      GITHUB_TOKEN:
+        required: true
+
+permissions:
+  contents: write
 
 jobs:
   create_release:
