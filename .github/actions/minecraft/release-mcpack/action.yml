@@ -37,6 +37,7 @@ runs:
         fetch-depth: 0
 
     - name: Determine folder and file paths
+      shell: bash
       run: |
         # If inputs.folder is empty, derive from project_name; spaces -> underscores, preserve case sensitivity
         FOLDER="${{ inputs.folder }}"
@@ -53,6 +54,7 @@ runs:
         echo "WORLD_BEHAVIOR=$WORLD_BEHAVIOR" >> $GITHUB_ENV
 
     - name: Ensure manifest.json exists
+      shell: bash
       run: |
         # If the manifest.json file does not already exist: Create it with a default structure.
         if [ ! -f "$MANIFEST" ]; then
@@ -81,6 +83,7 @@ runs:
         fi
 
     - name: Ensure world_behavior_packs.json exists
+      shell: bash
       run: |
         # If the world_behavior_packs.json file does not already exist: Create it with a default structure.
         if [ ! -f "$WORLD_BEHAVIOR" ]; then
@@ -105,6 +108,7 @@ runs:
         skip-tag: true
 
     - name: Debug changelog outputs
+      shell: bash
       run: |
         VERSION="${{ steps.changelog.outputs.version }}"
         echo "VERSION=$VERSION" >> $GITHUB_ENV
@@ -117,6 +121,7 @@ runs:
         echo "Skipped: ${{ steps.changelog.outputs.skipped }}"
 
     - name: Update manifest.json and world_behavior_packs.json
+      shell: bash
       if: steps.changelog.outputs.skipped != 'true'
       run: |
         echo "Updating versions to $VERSION"
@@ -163,6 +168,7 @@ runs:
         cat "$WORLD_BEHAVIOR"
 
     - name: Commit updates and create tag
+      shell: bash
       if: steps.changelog.outputs.skipped != 'true'
       run: |
         git config user.name "github-actions[bot]"
@@ -177,6 +183,7 @@ runs:
         git push --atomic origin "HEAD:${{ github.ref_name }}" "$TAG"
 
     - name: Create .mcpack archive
+      shell: bash
       if: steps.changelog.outputs.skipped != 'true'
       id: create_archive
       run: |
