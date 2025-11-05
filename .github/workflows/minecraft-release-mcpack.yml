@@ -194,4 +194,4 @@ jobs:
           body_path: CHANGELOG.md
           files: |
             ${{ steps.create_archive.outputs.archive }},
-            $WORLD_BEHAVIOR
+            ${{ env.WORLD_BEHAVIOR }}
