@@ -2,8 +2,11 @@ name: Minecraft Release MCPACK Template
 description: "Automated MCPACK release workflow"
 
 inputs:
+  github_token:
+    description: "GitHub Token"
+    required: true
   project_name:
-    description: "Project name"
+    description: "Project Name"
     required: true
     type: string
   folder:
@@ -95,7 +98,7 @@ runs:
       id: changelog
       uses: TriPSs/conventional-changelog-action@v6
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+        github-token: ${{ inputs.github_token }}
         output-file: "CHANGELOG.md"
         release-count: ${{ inputs.changelog_release_count }}
         skip-commit: true
@@ -188,7 +191,7 @@ runs:
       if: steps.changelog.outputs.skipped != 'true'
       uses: softprops/action-gh-release@v2
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
       with:
         tag_name: ${{ env.TAG }}
         name: "${{ inputs.project_name }} ${{ env.TAG }}"
