@@ -1,0 +1,198 @@
+name: Minecraft Release MCPACK Template
+description: "Automated MCPACK release workflow"
+
+inputs:
+  project_name:
+    description: "Project name"
+    required: true
+    type: string
+  folder:
+    description: "Folder"
+    required: false
+    type: string
+  header_uuid:
+    description: "Header UUID (header.uuid)"
+    required: true
+    type: string
+  module_uuid:
+    description: "Module UUID (modules[0].uuid)"
+    required: true
+    type: string
+  changelog_release_count:
+    description: "How many releases are included in the changelog"
+    required: false
+    type: number
+    default: 1
+
+runs:
+  using: "composit"
+
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+
+    - name: Determine folder and file paths
+      run: |
+        # If inputs.folder is empty, derive from project_name; spaces -> underscores, preserve case sensitivity
+        FOLDER="${{ inputs.folder }}"
+        if [ -z "$FOLDER" ]; then
+          FOLDER="${{ inputs.project_name }}"
+        fi
+        FOLDER="${FOLDER// /_}"
+        echo "FOLDER=$FOLDER" >> $GITHUB_ENV
+
+        MANIFEST="$FOLDER/manifest.json"
+        echo "MANIFEST=$MANIFEST" >> $GITHUB_ENV
+
+        WORLD_BEHAVIOR="world_behavior_packs.json"
+        echo "WORLD_BEHAVIOR=$WORLD_BEHAVIOR" >> $GITHUB_ENV
+
+    - name: Ensure manifest.json exists
+      run: |
+        # If the manifest.json file does not already exist: Create it with a default structure.
+        if [ ! -f "$MANIFEST" ]; then
+          mkdir -p "$FOLDER"
+          jq -n '{
+            format_version: 2,
+            header: {
+              name: "",
+              description: "",
+              uuid: "",
+              version: [0,0,1],
+              min_engine_version: [1,20,0]
+            },
+            modules: [
+              { type: "data", uuid: "", version: [0,0,1] }
+            ],
+            metadata: { authors: [] }
+          }' > "$MANIFEST"
+          echo "Created default manifest.json at $MANIFEST"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$MANIFEST"
+          git commit -m "fix: created default manifest.json" || echo "No changes to commit"
+          git push origin "HEAD:${{ github.ref_name }}"
+        fi
+
+    - name: Ensure world_behavior_packs.json exists
+      run: |
+        # If the world_behavior_packs.json file does not already exist: Create it with a default structure.
+        if [ ! -f "$WORLD_BEHAVIOR" ]; then
+          jq -n '[{ pack_id: "", version: [] }]' > "$WORLD_BEHAVIOR"
+          echo "Created default world_behavior_packs.json: $WORLD_BEHAVIOR"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$WORLD_BEHAVIOR"
+          git commit -m "fix: created default world_behavior_packs.json" || echo "No changes to commit"
+          git push origin "HEAD:${{ github.ref_name }}"
+        fi
+
+    - name: Generate changelog and version
+      id: changelog
+      uses: TriPSs/conventional-changelog-action@v6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        output-file: "CHANGELOG.md"
+        release-count: ${{ inputs.changelog_release_count }}
+        skip-commit: true
+        skip-tag: true
+
+    - name: Debug changelog outputs
+      run: |
+        VERSION="${{ steps.changelog.outputs.version }}"
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "Version: $VERSION"
+
+        TAG="${{ steps.changelog.outputs.tag }}"
+        echo "TAG=$TAG" >> $GITHUB_ENV
+        echo "Tag: $TAG"
+
+        echo "Skipped: ${{ steps.changelog.outputs.skipped }}"
+
+    - name: Update manifest.json and world_behavior_packs.json
+      if: steps.changelog.outputs.skipped != 'true'
+      run: |
+        echo "Updating versions to $VERSION"
+
+        # Version z.B. 1.2.3 -> [1,2,3]
+        ARRAY_VERSION="[${VERSION//./,}]"
+        echo "Array version: $ARRAY_VERSION"
+
+        ###
+        ### Update manifest.json
+        ###
+
+        # Set header.name
+        jq --arg name "${{ inputs.project_name }}" '.header.name = $name' "$MANIFEST" > tmp.json && mv tmp.json "$MANIFEST"
+        # Set header.description
+        jq --arg name "${{ inputs.project_name }}" --arg user "${{ github.actor }}" '.header.description = ($name + " by " + $user)' "$MANIFEST" > tmp.json && mv tmp.json "$MANIFEST"
+
+        # Set header.uuid
+        jq --arg uuid "${{ inputs.header_uuid }}" '.header.uuid = $uuid' "$MANIFEST" > tmp.json && mv tmp.json "$MANIFEST"
+        # Set modules[0].uuid
+        jq --arg uuid "${{ inputs.module_uuid }}" '.modules[0].uuid = $uuid' "$MANIFEST" > tmp.json && mv tmp.json "$MANIFEST"
+
+        # Ensure github-user is first author, preserve existing authors after (no duplicates)
+        jq --arg user "${{ github.actor }}" '.metadata.authors = ([$user] + (.metadata.authors // []) | reduce .[] as $item ( []; if ( . | index($item) ) == null then . + [$item] else . end ))' "$MANIFEST" > tmp.json && mv tmp.json "$MANIFEST"
+
+        # Set header.version
+        jq --argjson ver "$ARRAY_VERSION" '.header.version = $ver' "$MANIFEST" > tmp.json && mv tmp.json "$MANIFEST"
+        # Set modules[0].version
+        jq --argjson ver "$ARRAY_VERSION" '.modules[0].version = $ver' "$MANIFEST" > tmp.json && mv tmp.json "$MANIFEST"
+
+        echo "Updated manifest.json:"
+        cat "$MANIFEST"
+
+        ###
+        ### Update world_behavior_packs.json
+        ###
+
+        # Set pack_id
+        jq --arg uuid "${{ inputs.header_uuid }}" '.[0].pack_id = $uuid' "$WORLD_BEHAVIOR" > tmp.json && mv tmp.json "$WORLD_BEHAVIOR"
+        # Set version
+        jq --argjson ver "$ARRAY_VERSION" '.[0].version = $ver' "$WORLD_BEHAVIOR" > tmp.json && mv tmp.json "$WORLD_BEHAVIOR"
+
+        echo "Updated $WORLD_BEHAVIOR:"
+        cat "$WORLD_BEHAVIOR"
+
+    - name: Commit updates and create tag
+      if: steps.changelog.outputs.skipped != 'true'
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+        git add "$MANIFEST"
+        git add "$WORLD_BEHAVIOR"
+
+        git commit -m "bump pack versions to $VERSION" || echo "No changes to commit"
+        git tag "$TAG"
+
+        git push --atomic origin "HEAD:${{ github.ref_name }}" "$TAG"
+
+    - name: Create .mcpack archive
+      if: steps.changelog.outputs.skipped != 'true'
+      id: create_archive
+      run: |
+        ARCHIVE="$(echo "$FOLDER" | tr '[:upper:]' '[:lower:]')_${VERSION}.mcpack"
+        (
+          cd "$FOLDER"
+          zip -r "../$ARCHIVE" .
+        )
+        echo "archive=$ARCHIVE" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      if: steps.changelog.outputs.skipped != 'true'
+      uses: softprops/action-gh-release@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.TAG }}
+        name: "${{ inputs.project_name }} ${{ env.TAG }}"
+        body_path: CHANGELOG.md
+        files: |
+          ${{ steps.create_archive.outputs.archive }},
+          ${{ env.WORLD_BEHAVIOR }}
