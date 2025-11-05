@@ -28,7 +28,7 @@ inputs:
     default: 1
 
 runs:
-  using: "composit"
+  using: "composite"
 
   steps:
     - name: Checkout
