@@ -161,7 +161,7 @@ jobs:
           echo "Updated $WORLD_BEHAVIOR:"
           cat "$WORLD_BEHAVIOR"
 
-      - name: Commit updates, create tag and release
+      - name: Commit updates and create tag
         if: steps.changelog.outputs.skipped != 'true'
         run: |
           git config user.name "github-actions[bot]"
@@ -170,7 +170,7 @@ jobs:
           git add "$MANIFEST"
           git add "$WORLD_BEHAVIOR"
 
-          git commit -m "chore: bump pack versions to $VERSION" || echo "No changes to commit"
+          git commit -m "bump pack versions to $VERSION" || echo "No changes to commit"
           git tag "$TAG"
 
           git push --atomic origin "HEAD:${{ github.ref_name }}" "$TAG"
